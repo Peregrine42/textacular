@@ -83,7 +83,19 @@ module Textacular
   end
 
   def basic_condition_string(table_name, column, search_term)
-    "to_tsvector(#{quoted_language}, #{table_name}.#{column}::text) @@ plainto_tsquery(#{quoted_language}, #{search_term}::text)"
+    if self.json_fields.include? column.gsub(/"/, "")
+      %Q{
+        to_tsvector(
+          #{quoted_language},
+          (
+            SELECT string_agg(value, ' ')
+              FROM json_each_text(#{table_name}.#{column})
+          )
+        ) @@ plainto_tsquery(#{quoted_language}, #{search_term}::text)
+      }
+    else
+      "to_tsvector(#{quoted_language}, #{table_name}.#{column}::text) @@ plainto_tsquery(#{quoted_language}, #{search_term}::text)"
+    end
   end
 
   def advanced_similarities_and_conditions(parsed_query_hash)
@@ -100,7 +112,17 @@ module Textacular
   end
 
   def advanced_condition_string(table_name, column, search_term)
-    "to_tsvector(#{quoted_language}, #{table_name}.#{column}::text) @@ to_tsquery(#{quoted_language}, #{search_term}::text)"
+    if self.json_fields.include? column.gsub(/"/, "")
+      "to_tsvector(
+        #{quoted_language},
+        (
+          SELECT string_agg(value, ' ')
+            FROM json_each_text(#{table_name}.#{column})
+        )
+      ) @@ to_tsquery(#{quoted_language}, #{search_term}::text)"
+    else
+      "to_tsvector(#{quoted_language}, #{table_name}.#{column}::text) @@ to_tsquery(#{quoted_language}, #{search_term}::text)"
+    end
   end
 
   def fuzzy_similarities_and_conditions(parsed_query_hash)
