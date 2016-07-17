@@ -12,6 +12,10 @@ module Textacular
     'english'
   end
 
+  def json_fields
+    []
+  end
+
   def search(query = "", exclusive = true)
     basic_search(query, exclusive)
   end
